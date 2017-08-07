@@ -10,6 +10,8 @@ from pdfminer.layout import LAParams
 from pdfminer.converter import XMLConverter
 from io import BytesIO
 
+from lxml import etree
+
 
 fp = open('test.pdf', 'rb')
 
@@ -30,8 +32,17 @@ for page in PDFPage.create_pages(document):
     interpreter.process_page(page)
 
 text = retstr.getvalue().decode()
-print(text)
 
 fp.close()
 device.close()
+
+xml_parser = etree.XMLParser(remove_blank_text=True)
+
+root = etree.fromstring(retstr.getvalue(), parser=xml_parser)
+
+for element in root.iter("text"):
+    print(etree.tostring(element, pretty_print=True))
+    #print("%s - %s" % (element.tag, element.text))
+
+
 retstr.close()

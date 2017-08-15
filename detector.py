@@ -13,36 +13,53 @@ from io import BytesIO
 from lxml import etree
 
 
-fp = open('test.pdf', 'rb')
 
-parser = PDFParser(fp)
+def get_text_groups(file):
+    parser = PDFParser(file)
 
-document = PDFDocument(parser, "pass")
+    document = PDFDocument(parser, "pass")
 
-if not document.is_extractable:
-    raise PDFTextExtractionNotAllowed
+    if not document.is_extractable:
+        raise PDFTextExtractionNotAllowed
 
-rsrcmgr = PDFResourceManager()
-laparams = LAParams()
-retstr = BytesIO()
+    rsrcmgr = PDFResourceManager()
+    laparams = LAParams()
+    retstr = BytesIO()
 
-device = XMLConverter(rsrcmgr, retstr, codec='utf-8', laparams=laparams)
-interpreter = PDFPageInterpreter(rsrcmgr, device)
-for page in PDFPage.create_pages(document):
-    interpreter.process_page(page)
+    device = XMLConverter(rsrcmgr, retstr, codec='utf-8', laparams=laparams)
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
 
-text = retstr.getvalue().decode()
+    for page in PDFPage.create_pages(document):
+        interpreter.process_page(page)
 
-fp.close()
-device.close()
+    text = retstr.getvalue().decode()
 
-xml_parser = etree.XMLParser(remove_blank_text=True)
+    file.close()
+    device.close()
 
-root = etree.fromstring(retstr.getvalue(), parser=xml_parser)
+    xml_parser = etree.XMLParser(remove_blank_text=True)
 
-for element in root.iter("text"):
-    print(etree.tostring(element, pretty_print=True))
-    #print("%s - %s" % (element.tag, element.text))
+    root = etree.fromstring(retstr.getvalue(), parser=xml_parser)
 
+    n = 0
 
-retstr.close()
+    for element in root.iterdescendants():
+        if element.tag in ['textgroup']:
+            n += 1
+            print(element.tag + " " + str(n))
+            children = element.getchildren()
+            for child in children:
+                if child.tag in ['textbox']:
+                    print('\t' + child.tag)
+                    break
+
+    retstr.close()
+
+    return
+
+def main():
+    fp = open('test.pdf', 'rb')
+    text_groups = get_text_groups(fp)
+
+if __name__ == '__main__':
+    main()
